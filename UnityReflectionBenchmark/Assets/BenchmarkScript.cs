@@ -27,6 +27,9 @@ public class BenchmarkScript : MonoBehaviour
         public int e;
         public int f;
     }
+    public delegate object ObjectActivator();
+    private readonly Dictionary<string, ObjectActivator> expressionCreateInstanceFuncs = new Dictionary<string, ObjectActivator>();
+    private readonly Dictionary<string, DynamicMethod> ilCreateInstanceFuncs = new Dictionary<string, DynamicMethod>();
 
     void Start()
     {
@@ -94,32 +97,38 @@ public class BenchmarkScript : MonoBehaviour
 
     public object ExpressionCreateInstace(Type type)
     {
-        if (type.IsValueType)
-            return Expression.Lambda<Func<object>>(Expression.Convert(Expression.New(type), typeof(object))).Compile().Invoke();
-        return Expression.Lambda<Func<object>>(Expression.New(type)).Compile().Invoke();
+        if (!expressionCreateInstanceFuncs.ContainsKey(type.FullName))
+            if (type.IsValueType)
+                expressionCreateInstanceFuncs.Add(type.FullName, Expression.Lambda<ObjectActivator>(Expression.Convert(Expression.New(type), typeof(object))).Compile());
+            else
+                expressionCreateInstanceFuncs.Add(type.FullName, Expression.Lambda<ObjectActivator>(Expression.New(type)).Compile());
+        return expressionCreateInstanceFuncs[type.FullName].Invoke();
     }
 
     private object ILCreateInstance(Type type)
     {
-        var method = new DynamicMethod("", typeof(object), Type.EmptyTypes);
-        var il = method.GetILGenerator();
-
-        if (type.IsValueType)
+        if (!ilCreateInstanceFuncs.ContainsKey(type.FullName))
         {
-            var local = il.DeclareLocal(type);
-            // method.InitLocals == true, so we don't have to use initobj here
-            il.Emit(OpCodes.Ldloc, local);
-            il.Emit(OpCodes.Box, type);
-            il.Emit(OpCodes.Ret);
-        }
-        else
-        {
-            var ctor = type.GetConstructor(Type.EmptyTypes);
-            il.Emit(OpCodes.Newobj, ctor);
-            il.Emit(OpCodes.Ret);
-        }
+            var method = new DynamicMethod("", typeof(object), Type.EmptyTypes);
+            var il = method.GetILGenerator();
 
-        return method.Invoke(null, null);
+            if (type.IsValueType)
+            {
+                var local = il.DeclareLocal(type);
+                // method.InitLocals == true, so we don't have to use initobj here
+                il.Emit(OpCodes.Ldloc, local);
+                il.Emit(OpCodes.Box, type);
+                il.Emit(OpCodes.Ret);
+            }
+            else
+            {
+                var ctor = type.GetConstructor(Type.EmptyTypes);
+                il.Emit(OpCodes.Newobj, ctor);
+                il.Emit(OpCodes.Ret);
+            }
+            ilCreateInstanceFuncs.Add(type.FullName, method);
+        }
+        return ilCreateInstanceFuncs[type.FullName].Invoke(null, null);
     }
 
     private void StopWatch(string tag, Action action)
