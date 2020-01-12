@@ -33,6 +33,7 @@ public class BenchmarkScript : MonoBehaviour
     private readonly Dictionary<string, ObjectActivator> expressionCreateInstanceFuncs = new Dictionary<string, ObjectActivator>();
     private readonly Dictionary<string, Func<object>> expressionCreateInstanceFuncs2 = new Dictionary<string, Func<object>>();
     private readonly Dictionary<string, DynamicMethod> ilCreateInstanceFuncs = new Dictionary<string, DynamicMethod>();
+    public delegate void TestDelegate<T1, T2>(T1 a, T2 b);
 
     public int benchmarkLoopCount = 100000;
     
@@ -53,6 +54,10 @@ public class BenchmarkScript : MonoBehaviour
         BenchmarkActivatorCreateInstance();
         BenchmarkMethodInfoInvoke();
         BenchmarkDelegateDynamicInvoke();
+        BenchmarkMethodInvoke();
+        BenchmarkMethodInvoke2();
+        BenchmarkDelegateInvoke();
+        BenchmarkDelegateInvoke2();
     }
 
     private void TestFunction(int a, int b)
@@ -80,6 +85,56 @@ public class BenchmarkScript : MonoBehaviour
             for (int i = 0; i < benchmarkLoopCount; ++i)
             {
                 del.DynamicInvoke(new object[] { 1, 1 });
+            }
+        });
+    }
+
+    private void BenchmarkMethodInvoke()
+    {
+        object var1 = 1;
+        object var2 = 1;
+        StopWatch("BenchmarkMethodInvoke", () => {
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                TestFunction((int)var1, (int)var2);
+            }
+        });
+    }
+
+    private void BenchmarkMethodInvoke2()
+    {
+        int var1 = 1;
+        int var2 = 1;
+        StopWatch("BenchmarkMethodInvoke2", () => {
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                TestFunction(var1, var2);
+            }
+        });
+    }
+
+    private void BenchmarkDelegateInvoke()
+    {
+        TestDelegate<int, int> test = TestFunction;
+        object var1 = 1;
+        object var2 = 1;
+        StopWatch("BenchmarkDelegateInvoke", () => {
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                test.Invoke((int)var1, (int)var2);
+            }
+        });
+    }
+
+    private void BenchmarkDelegateInvoke2()
+    {
+        TestDelegate<int, int> test = TestFunction;
+        int var1 = 1;
+        int var2 = 1;
+        StopWatch("BenchmarkDelegateInvoke2", () => {
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                test.Invoke(var1, var2);
             }
         });
     }
