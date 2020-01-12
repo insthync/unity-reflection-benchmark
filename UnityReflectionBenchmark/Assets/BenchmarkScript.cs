@@ -2,7 +2,9 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Linq;
 using System.Linq.Expressions;
+using System.Reflection;
 using System.Reflection.Emit;
 using UnityEngine;
 
@@ -36,6 +38,37 @@ public class BenchmarkScript : MonoBehaviour
         BenchmarkIL();
         BenchmarkExpression();
         BenchmarkActivatorCreateInstance();
+        BenchmarkMethodInfoInvoke();
+        BenchmarkDelegateDynamicInvoke();
+    }
+
+    private void TestFunction(int a, int b)
+    {
+        int c = a + b;
+    }
+
+    private void BenchmarkMethodInfoInvoke()
+    {
+        MethodInfo methodInfo = GetType().GetMethod("TestFunction", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        StopWatch("BenchmarkMethodInfoInvoke", () => {
+            for (int i = 0; i < 10000; ++i)
+            {
+                methodInfo.Invoke(this, new object[] { 1, 1 });
+            }
+        });
+    }
+
+    private void BenchmarkDelegateDynamicInvoke()
+    {
+        MethodInfo methodInfo = GetType().GetMethod("TestFunction", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
+        Type[] types = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
+        Delegate del = Delegate.CreateDelegate(Expression.GetActionType(types), this, "TestFunction");
+        StopWatch("BenchmarkDelegateDynamicInvoke", () => {
+            for (int i = 0; i < 10000; ++i)
+            {
+                del.DynamicInvoke(new object[] { 1, 1 });
+            }
+        });
     }
 
     private void BenchmarkActivatorCreateInstance()
