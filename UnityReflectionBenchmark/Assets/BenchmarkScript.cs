@@ -32,8 +32,17 @@ public class BenchmarkScript : MonoBehaviour
     public delegate object ObjectActivator();
     private readonly Dictionary<string, ObjectActivator> expressionCreateInstanceFuncs = new Dictionary<string, ObjectActivator>();
     private readonly Dictionary<string, DynamicMethod> ilCreateInstanceFuncs = new Dictionary<string, DynamicMethod>();
+    
+    private void Update()
+    {
+        if (Input.anyKeyDown)
+        {
+            RunBenchmark();
+            UnityEngine.Debug.Log("--- Done ---");
+        }
+    }
 
-    void Start()
+    private void RunBenchmark()
     {
         BenchmarkIL();
         BenchmarkExpression();
