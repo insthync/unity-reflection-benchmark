@@ -31,6 +31,7 @@ public class BenchmarkScript : MonoBehaviour
     }
     public delegate object ObjectActivator();
     private readonly Dictionary<string, ObjectActivator> expressionCreateInstanceFuncs = new Dictionary<string, ObjectActivator>();
+    private readonly Dictionary<string, Func<object>> expressionCreateInstanceFuncs2 = new Dictionary<string, Func<object>>();
     private readonly Dictionary<string, DynamicMethod> ilCreateInstanceFuncs = new Dictionary<string, DynamicMethod>();
 
     public int benchmarkLoopCount = 100000;
@@ -48,6 +49,7 @@ public class BenchmarkScript : MonoBehaviour
     {
         BenchmarkIL();
         BenchmarkExpression();
+        BenchmarkExpression2();
         BenchmarkActivatorCreateInstance();
         BenchmarkMethodInfoInvoke();
         BenchmarkDelegateDynamicInvoke();
@@ -120,6 +122,25 @@ public class BenchmarkScript : MonoBehaviour
         });
     }
 
+    private void BenchmarkExpression2()
+    {
+        StopWatch("BenchmarkExpression2_Struct", () => {
+            TestStruct tempTestStruct;
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                tempTestStruct = (TestStruct)ExpressionCreateInstace2(typeof(TestStruct));
+            }
+        });
+        StopWatch("BenchmarkExpression2_Class", () =>
+        {
+            TestClass tempTestClass;
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                tempTestClass = (TestClass)ExpressionCreateInstace2(typeof(TestClass));
+            }
+        });
+    }
+
     private void BenchmarkIL()
     {
         StopWatch("BenchmarkIL_Struct", () => {
@@ -147,6 +168,16 @@ public class BenchmarkScript : MonoBehaviour
             else
                 expressionCreateInstanceFuncs.Add(type.FullName, Expression.Lambda<ObjectActivator>(Expression.New(type)).Compile());
         return expressionCreateInstanceFuncs[type.FullName].Invoke();
+    }
+
+    public object ExpressionCreateInstace2(Type type)
+    {
+        if (!expressionCreateInstanceFuncs2.ContainsKey(type.FullName))
+            if (type.IsValueType)
+                expressionCreateInstanceFuncs2.Add(type.FullName, Expression.Lambda<Func<object>>(Expression.Convert(Expression.New(type), typeof(object))).Compile());
+            else
+                expressionCreateInstanceFuncs2.Add(type.FullName, Expression.Lambda<Func<object>>(Expression.New(type)).Compile());
+        return expressionCreateInstanceFuncs2[type.FullName].Invoke();
     }
 
     private object ILCreateInstance(Type type)
