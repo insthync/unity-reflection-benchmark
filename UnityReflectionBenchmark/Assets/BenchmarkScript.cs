@@ -32,6 +32,8 @@ public class BenchmarkScript : MonoBehaviour
     public delegate object ObjectActivator();
     private readonly Dictionary<string, ObjectActivator> expressionCreateInstanceFuncs = new Dictionary<string, ObjectActivator>();
     private readonly Dictionary<string, DynamicMethod> ilCreateInstanceFuncs = new Dictionary<string, DynamicMethod>();
+
+    public int benchmarkLoopCount = 100000;
     
     private void Update()
     {
@@ -60,7 +62,7 @@ public class BenchmarkScript : MonoBehaviour
     {
         MethodInfo methodInfo = GetType().GetMethod("TestFunction", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance | BindingFlags.DeclaredOnly);
         StopWatch("BenchmarkMethodInfoInvoke", () => {
-            for (int i = 0; i < 10000; ++i)
+            for (int i = 0; i < benchmarkLoopCount; ++i)
             {
                 methodInfo.Invoke(this, new object[] { 1, 1 });
             }
@@ -73,7 +75,7 @@ public class BenchmarkScript : MonoBehaviour
         Type[] types = methodInfo.GetParameters().Select(p => p.ParameterType).ToArray();
         Delegate del = Delegate.CreateDelegate(Expression.GetActionType(types), this, "TestFunction");
         StopWatch("BenchmarkDelegateDynamicInvoke", () => {
-            for (int i = 0; i < 10000; ++i)
+            for (int i = 0; i < benchmarkLoopCount; ++i)
             {
                 del.DynamicInvoke(new object[] { 1, 1 });
             }
@@ -84,7 +86,7 @@ public class BenchmarkScript : MonoBehaviour
     {
         StopWatch("BenchmarkActivatorCreateInstance_Struct", () => {
             TestStruct tempTestStruct;
-            for (int i = 0; i < 10000; ++i)
+            for (int i = 0; i < benchmarkLoopCount; ++i)
             {
                 tempTestStruct = (TestStruct)Activator.CreateInstance(typeof(TestStruct));
             }
@@ -92,7 +94,7 @@ public class BenchmarkScript : MonoBehaviour
         StopWatch("BenchmarkActivatorCreateInstance_Class", () =>
         {
             TestClass tempTestClass;
-            for (int i = 0; i < 10000; ++i)
+            for (int i = 0; i < benchmarkLoopCount; ++i)
             {
                 tempTestClass = (TestClass)Activator.CreateInstance(typeof(TestClass));
             }
@@ -103,7 +105,7 @@ public class BenchmarkScript : MonoBehaviour
     {
         StopWatch("BenchmarkExpression_Struct", () => {
             TestStruct tempTestStruct;
-            for (int i = 0; i < 10000; ++i)
+            for (int i = 0; i < benchmarkLoopCount; ++i)
             {
                 tempTestStruct = (TestStruct)ExpressionCreateInstace(typeof(TestStruct));
             }
@@ -111,7 +113,7 @@ public class BenchmarkScript : MonoBehaviour
         StopWatch("BenchmarkExpression_Class", () =>
         {
             TestClass tempTestClass;
-            for (int i = 0; i < 10000; ++i)
+            for (int i = 0; i < benchmarkLoopCount; ++i)
             {
                 tempTestClass = (TestClass)ExpressionCreateInstace(typeof(TestClass));
             }
@@ -122,7 +124,7 @@ public class BenchmarkScript : MonoBehaviour
     {
         StopWatch("BenchmarkIL_Struct", () => {
             TestStruct tempTestStruct;
-            for (int i = 0; i < 10000; ++i)
+            for (int i = 0; i < benchmarkLoopCount; ++i)
             {
                 tempTestStruct = (TestStruct)ILCreateInstance(typeof(TestStruct));
             }
@@ -130,7 +132,7 @@ public class BenchmarkScript : MonoBehaviour
         StopWatch("BenchmarkIL_Class", () =>
         {
             TestClass tempTestClass;
-            for (int i = 0; i < 10000; ++i)
+            for (int i = 0; i < benchmarkLoopCount; ++i)
             {
                 tempTestClass = (TestClass)ILCreateInstance(typeof(TestClass));
             }
