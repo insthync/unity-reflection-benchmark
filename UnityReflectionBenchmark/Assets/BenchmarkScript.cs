@@ -29,10 +29,19 @@ public class BenchmarkScript : MonoBehaviour
         public int e;
         public int f;
     }
+
+    enum TestEnum : byte
+    {
+        One,
+        Two,
+        Three
+    }
+
     public delegate object ObjectActivator();
     private readonly Dictionary<string, ObjectActivator> expressionCreateInstanceFuncs = new Dictionary<string, ObjectActivator>();
     private readonly Dictionary<string, Func<object>> expressionCreateInstanceFuncs2 = new Dictionary<string, Func<object>>();
     private readonly Dictionary<string, DynamicMethod> ilCreateInstanceFuncs = new Dictionary<string, DynamicMethod>();
+    private readonly Dictionary<Type, Type> enumUnderlyingTypes = new Dictionary<Type, Type>();
     public delegate void TestDelegate<T1, T2>(T1 a, T2 b);
 
     public int benchmarkLoopCount = 100000;
@@ -58,6 +67,7 @@ public class BenchmarkScript : MonoBehaviour
         BenchmarkMethodInvoke2();
         BenchmarkDelegateInvoke();
         BenchmarkDelegateInvoke2();
+        BenchmarkEnumGetUnderlyingType();
     }
 
     private void TestFunction(int a, int b)
@@ -215,6 +225,30 @@ public class BenchmarkScript : MonoBehaviour
         });
     }
 
+    private void BenchmarkEnumGetUnderlyingType()
+    {
+        StopWatch("BenchmarkEnumGetUnderlyingType_1", () => {
+            Type enumType;
+            Type underlyingType;
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                enumType = typeof(TestEnum);
+                underlyingType = enumType.GetEnumUnderlyingType();
+            }
+        });
+        StopWatch("BenchmarkEnumGetUnderlyingType_2", () => {
+            Type enumType;
+            Type underlyingType;
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                enumType = typeof(TestEnum);
+                if (!enumUnderlyingTypes.ContainsKey(enumType))
+                    enumUnderlyingTypes.Add(enumType, enumType.GetEnumUnderlyingType());
+                underlyingType = enumUnderlyingTypes[enumType];
+            }
+        });
+    }
+
     public object ExpressionCreateInstace(Type type)
     {
         if (!expressionCreateInstanceFuncs.ContainsKey(type.FullName))
@@ -235,7 +269,7 @@ public class BenchmarkScript : MonoBehaviour
         return expressionCreateInstanceFuncs2[type.FullName].Invoke();
     }
 
-    private object ILCreateInstance(Type type)
+    public object ILCreateInstance(Type type)
     {
         if (!ilCreateInstanceFuncs.ContainsKey(type.FullName))
         {
