@@ -45,7 +45,9 @@ public class BenchmarkScript : MonoBehaviour
     public delegate void TestDelegate<T1, T2>(T1 a, T2 b);
 
     public int benchmarkLoopCount = 100000;
-    
+    private List<GameObject> gameObjects = new List<GameObject>();
+    private Dictionary<GameObject, Dictionary<Type, object>> cacheComponents = new Dictionary<GameObject, Dictionary<Type, object>>();
+
     private void Update()
     {
         if (Input.anyKeyDown)
@@ -68,6 +70,8 @@ public class BenchmarkScript : MonoBehaviour
         BenchmarkDelegateInvoke();
         BenchmarkDelegateInvoke2();
         BenchmarkEnumGetUnderlyingType();
+        BenchmarkGetComponent();
+        BenchmarkNullCheck();
     }
 
     private void TestFunction(int a, int b)
@@ -249,6 +253,102 @@ public class BenchmarkScript : MonoBehaviour
         });
     }
 
+    private void BenchmarkGetComponent()
+    {
+        for (int i = gameObjects.Count - 1; i >= 0; --i)
+        {
+            Destroy(gameObjects[i]);
+            gameObjects.RemoveAt(i);
+        }
+        for (int i = 0; i < benchmarkLoopCount; ++i)
+        {
+            gameObjects.Add(new GameObject("obj_" + i, typeof(TestComponent)));
+        }
+
+        StopWatch("BenchmarkGetComponent_1-Default", () =>
+        {
+            TestComponent testComp;
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                testComp = gameObjects[i].GetComponent<TestComponent>();
+            }
+        });
+        StopWatch("BenchmarkGetComponent_2-Default", () =>
+        {
+            TestComponent testComp;
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                testComp = gameObjects[i].GetComponent<TestComponent>();
+            }
+        });
+        StopWatch("BenchmarkGetComponent_3-Caching", () =>
+        {
+            TestComponent testComp;
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                testComp = GetCacheComponent<TestComponent>(gameObjects[i]);
+            }
+        });
+        StopWatch("BenchmarkGetComponent_4-Cached", () =>
+        {
+            TestComponent testComp;
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                testComp = GetCacheComponent<TestComponent>(gameObjects[i]);
+            }
+        });
+    }
+
+    private void BenchmarkNullCheck()
+    {
+        GameObject nullCheckObj = new GameObject("nullCheckObj", typeof(TestComponent));
+        TestComponent nullCheckComp = nullCheckObj.GetComponent<TestComponent>();
+        StopWatch("BenchmarkNullCheck_1 != null (Not Null)", () =>
+        {
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                if (nullCheckComp != null)
+                {
+
+                }
+            }
+        });
+        StopWatch("BenchmarkNullCheck_2 bool (Not Null)", () =>
+        {
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                if (nullCheckComp)
+                {
+
+                }
+            }
+        });
+        Destroy(nullCheckObj);
+        nullCheckObj = new GameObject("nullCheckObj");
+        nullCheckComp = nullCheckObj.GetComponent<TestComponent>();
+        StopWatch("BenchmarkNullCheck_3 != null (Null)", () =>
+        {
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                if (nullCheckComp != null)
+                {
+
+                }
+            }
+        });
+        StopWatch("BenchmarkNullCheck_4 bool (Null)", () =>
+        {
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                if (nullCheckComp)
+                {
+
+                }
+            }
+        });
+        Destroy(nullCheckObj);
+    }
+
     public object ExpressionCreateInstace(Type type)
     {
         if (!expressionCreateInstanceFuncs.ContainsKey(type.FullName))
@@ -293,6 +393,16 @@ public class BenchmarkScript : MonoBehaviour
             ilCreateInstanceFuncs.Add(type.FullName, method);
         }
         return ilCreateInstanceFuncs[type.FullName].Invoke(null, null);
+    }
+
+    private T GetCacheComponent<T>(GameObject gameObject)
+    {
+        Type type = typeof(T);
+        if (!cacheComponents.ContainsKey(gameObject))
+            cacheComponents[gameObject] = new Dictionary<Type, object>();
+        if (!cacheComponents[gameObject].ContainsKey(type))
+            cacheComponents[gameObject][type] = gameObject.GetComponent<T>();
+        return (T)cacheComponents[gameObject][type];
     }
 
     private void StopWatch(string tag, Action action)
