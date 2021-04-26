@@ -47,6 +47,7 @@ public class BenchmarkScript : MonoBehaviour
     public int benchmarkLoopCount = 100000;
     private List<GameObject> gameObjects = new List<GameObject>();
     private Dictionary<GameObject, Dictionary<Type, object>> cacheComponents = new Dictionary<GameObject, Dictionary<Type, object>>();
+    private static readonly string TypeName = typeof(int).FullName;
 
     private void Update()
     {
@@ -72,6 +73,8 @@ public class BenchmarkScript : MonoBehaviour
         BenchmarkEnumGetUnderlyingType();
         BenchmarkGetComponent();
         BenchmarkNullCheck();
+        BenchmarkCompareType();
+        BenchmarkCompareTypeName();
     }
 
     private void TestFunction(int a, int b)
@@ -347,6 +350,32 @@ public class BenchmarkScript : MonoBehaviour
             }
         });
         Destroy(nullCheckObj);
+    }
+
+    private void BenchmarkCompareType()
+    {
+        object obj = 0;
+        StopWatch("BenchmarkCompareType", () =>
+        {
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                Type type = obj.GetType();
+                bool equal = type == typeof(int);
+            }
+        });
+    }
+
+    private void BenchmarkCompareTypeName()
+    {
+        object obj = 0;
+        StopWatch("BenchmarkCompareTypeName", () =>
+        {
+            for (int i = 0; i < benchmarkLoopCount; ++i)
+            {
+                Type type = obj.GetType();
+                bool equal = type.FullName.Equals(TypeName);
+            }
+        });
     }
 
     public object ExpressionCreateInstace(Type type)
